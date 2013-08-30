@@ -10,7 +10,12 @@ module.exports = class Expression extends Array
 
   toString: -> @join ' '
 
+  clone: ->
+    # TODO 
+
   add: (expression) ->
+    return false if @impossible
+
     if typeof expression is 'string'
       words = expression.match regexWords
       expression = []
@@ -20,10 +25,20 @@ module.exports = class Expression extends Array
 
     added = 0
 
-    for c in expression when !@criteria[(c = if c instanceof Criterion then c else new Criterion c).normalize()]
-      @push @criteria[c] = c
-      ++added
+    for c in expression
+      c = if c instanceof Criterion then c else new Criterion c
+      if current = @criteria[c.cat]
+        current.merge c
+      else
+        current = @criteria[c.cat] = c
+        @push c
+        ++added
+      if current.impossible
+        @impossible = true
+        @criteria = {}
+        @length = 0
+        return false
 
     @sort Criterion.compare if added
-    added
+    true
 
