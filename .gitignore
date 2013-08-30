@@ -1,0 +1,4 @@
+node_modules
+*.jar
+package.yml
+node_modules
