@@ -13,6 +13,12 @@ module.exports = class Expression extends Array
     return '' if @impossible
     @join ' '
 
+  test: (rhs) ->
+    rhs = new Expression rhs unless rhs instanceof Expression
+    for c in this
+      return false unless c.test rhs.criteria[c.cat]
+    true
+
   clone: ->
     result = new Expression @toString()
     result.impossible = true if @impossible

@@ -1,5 +1,7 @@
 ops = require './ops'
 _ = require 'lodash-fork'
+maxInt = 9007199254740992
+minInt = -9007199254740992
 
 regex = /^(-)?(\w+?)([<>][=]?)?(\d+)?$/
 NEG = 1
@@ -9,7 +11,7 @@ NUM = 4
 
 module.exports = class Criterion
   constructor: (str) ->
-    [str, words...] = str.split ' '
+    [str, words...] = (str||'').split ' '
 
     if m = str.match regex
       @cat = m[CAT]
@@ -20,16 +22,28 @@ module.exports = class Criterion
 
     @merge word for word in words
 
-    # TODO
-    # catMatch = new RegExp "^#{_.regexpEscape @cat}(\\d+)?$"
-    # if @num
-    #   unless @op
-    #     opMatch = (num) -> num is @num
-    #   else
-    #     opMatch = (num) -> eval "#{num} #{@op} #{@num}"
-    # @test = (category) ->
-    #   matches = (n = catMatch.exec category) and (!@num? or opMatch? n[1])
-    #   return if @neg then 0|!!matches else !!matches
+    @test = (rhs) ->
+      return !!@neg unless rhs
+      rhs = new Criterion rhs unless rhs instanceof Criterion
+      return true if @neg and rhs.neg
+      lhsLower = @lower
+      lhsUpper = @upper
+      if @neg
+        return false if !lhsLower? and !lhsUpper?
+        ++lhsLower if lhsLower
+        --lhsUpper if lhsUpper
+      rhsLower = rhs.lower
+      rhsUpper = rhs.upper
+      if rhs.neg
+        return false if !rhsLower? and !rhsUpper?
+        ++rhsLower if rhsLower
+        --rhsUpper if rhsUpper
+
+      lhsLower ?= minInt
+      rhsLower ?= minInt
+      lhsUpper ?= maxInt
+      rhsUpper ?= maxInt
+      (lhsLower <= rhsUpper) and (lhsUpper >= rhsLower)
 
   merge: (rhs) ->
     if rhs
@@ -66,7 +80,7 @@ module.exports = class Criterion
     if lhs.neg isnt rhs.neg
       if lhs.neg then -1 else 1
     else if lhs.cat isnt rhs.cat
-      lhs.cat.localeCompare rhs.cat
+      if lhs.cat < rhs.cat then -1 else if lhs.cat > rhs.cat then 1 else 0
     else if (lhs1 = 0|lhs.lower) isnt (rhs1 = 0|rhs.lower)
       if lhs1 < rhs1 then -1 else 1
     else if (lhs1 = 0|lhs.upper) isnt (rhs1 = 0|rhs.upper)
