@@ -5,17 +5,27 @@ ExpressionSet = require '../expression_set'
 debugger
 
 # a = new Expression
+# a.merge '-ie<9'
+# a.merge '-ie>12'
 # a.merge 'ie'
-# a.merge 'ie<11'
-# a.merge 'ie>=10'
+# # a.merge 'ie'
+# # a.merge 'ie<11'
+# # a.merge 'ie>=10'
 # a.merge 'release'
-# a.merge 'ie<6'
+# # a.merge 'ie<6'
 # console.log ''+a
 
-a = [
-  new Expression '-debug ie>8'
-]
+# a = [
+#   new Expression '-debug ie>8'
+# ]
+# 
+# for expr in ExpressionSet.complete a
+#   console.log expr.toString()
+# 
 
-for expr in ExpressionSet.complete a
+
+a = new ExpressionSet
+
+r = a.splitExpression '-ie<9', ['ie<8','-ie<8']
+for expr in r
   console.log expr.toString()
-

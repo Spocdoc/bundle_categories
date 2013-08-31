@@ -13,7 +13,7 @@ module.exports = class Criterion
 
     if m = str.match regex
       @cat = m[CAT]
-      @_normalize m[NEG] || '', ops[m[OP]] || '', m[NUM] && (m[NUM]|0)
+      @_normalize m[NEG] || '', m[OP], m[NUM] && (m[NUM]|0)
     else
       @cat = @op = @neg = ''
       @impossible = true
@@ -33,12 +33,30 @@ module.exports = class Criterion
 
   merge: (rhs) ->
     if rhs
-      if @impossible or rhs.impossible or rhs.neg isnt @neg
-        @impossible = true
-      else unless @neg
-        @lower = lower if (lower = rhs.lower)? and (!@lower? or lower > @lower)
-        @upper = upper if (upper = rhs.upper)? and (!@upper? or upper < @upper)
-        @impossible = true if @upper? and @lower? and @upper < @lower
+      return !(@impossible = true) if @impossible or rhs.impossible
+      {upper,lower} = rhs
+
+      if rhs.neg isnt @neg
+        if rhs.neg
+          return !(@impossible = true) if !upper? and !lower?
+          ++lower if lower?
+          --upper if upper?
+        else
+          return !(@impossible = true) if !@upper? and !@lower?
+          @neg = ''
+          ++@lower if @lower?
+          --@upper if @upper?
+
+      @lower = lower if lower? and (!@lower? or lower > @lower)
+      @upper = upper if upper? and (!@upper? or upper < @upper)
+
+      if @upper? and @lower?
+        if @upper < @lower
+          @impossible = true
+        else if @neg and @upper is @lower
+          delete @upper
+          delete @lower
+
     return !@impossible
 
   clone: ->
@@ -46,27 +64,21 @@ module.exports = class Criterion
 
   @compare: (lhs, rhs) ->
     if lhs.neg isnt rhs.neg
-      if lhs.neg
-        -1
-      else
-        1
+      if lhs.neg then -1 else 1
     else if lhs.cat isnt rhs.cat
       lhs.cat.localeCompare rhs.cat
-    else if (lhs1 = 0|lhs.num) isnt (rhs1 = 0|rhs.num)
-      if lhs1 < rhs1
-        -1
-      else
-        1
-    else if (lhs1 = lhs.op.toString()) isnt rhs1 = rhs.op.toString()
-      lhs1.localeCompare rhs1
+    else if (lhs1 = 0|lhs.lower) isnt (rhs1 = 0|rhs.lower)
+      if lhs1 < rhs1 then -1 else 1
+    else if (lhs1 = 0|lhs.upper) isnt (rhs1 = 0|rhs.upper)
+      if lhs1 < rhs1 then -1 else 1
     else
       0
 
   toString: ->
     return '' if @impossible
     return "#{@neg}#{@cat}#{@lower ? ''}" if `this.upper == this.lower`
-    str = if @lower? then "#{@cat}>=#{@lower}" else ''
-    str += "#{if str then ' ' else ''}#{@cat}<=#{@upper}" if @upper?
+    str = if @lower? then "#{@neg}#{@cat}#{if @neg then '<=' else '>='}#{@lower}" else ''
+    str += "#{if str then ' ' else ''}#{@neg}#{@cat}#{if @neg then '>=' else '<='}#{@upper}" if @upper?
     str
 
   # - removes negation if possible
@@ -77,19 +89,23 @@ module.exports = class Criterion
       neg = if neg then '' else '-'
 
     if op
-      if neg
-        op = op.inverse
-        neg = ''
-      switch op.toString()
-        when '>='
-          @lower = num
-        when '<='
-          @upper num
-        when '<'
-          @upper = num-1
+      switch op.charAt(0)
         when '>'
-          @lower = num+1
+          ++num unless op.charAt(1) is '='
+          if neg
+            @upper = num
+          else
+            @lower = num
+
+        when '<'
+          --num unless op.charAt(1) is '='
+          if neg
+            @lower = num
+          else
+            @upper = num
+
     else if num?
+      throw new Error "Can't create a hole in Criterion (adding [#{neg}#{@cat}#{num}])" if neg
       @upper = @lower = num
 
     @neg = neg
