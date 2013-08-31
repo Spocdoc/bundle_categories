@@ -1,19 +1,24 @@
 Criterion = require './criterion'
 regexWords = /\S+/g
+regexSpaces = /\ +/
 
 # OK to extend array. this is V8-only code
 module.exports = class Expression extends Array
   constructor: (expression) ->
     super
     @criteria = {}
-    @add expression if expression
+    @merge expression if expression
 
-  toString: -> @join ' '
+  toString: ->
+    return '' if @impossible
+    @join ' '
 
   clone: ->
-    # TODO 
+    result = new Expression @toString()
+    result.impossible = true if @impossible
+    result
 
-  add: (expression) ->
+  merge: (expression) ->
     return false if @impossible
 
     if typeof expression is 'string'
@@ -33,12 +38,8 @@ module.exports = class Expression extends Array
         current = @criteria[c.cat] = c
         @push c
         ++added
-      if current.impossible
-        @impossible = true
-        @criteria = {}
-        @length = 0
-        return false
+      @impossible = true if current.impossible
 
     @sort Criterion.compare if added
-    true
+    return !@impossible
 

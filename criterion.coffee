@@ -41,6 +41,9 @@ module.exports = class Criterion
         @impossible = true if @upper? and @lower? and @upper < @lower
     return !@impossible
 
+  clone: ->
+    new Criterion @toString()
+
   @compare: (lhs, rhs) ->
     if lhs.neg isnt rhs.neg
       if lhs.neg
