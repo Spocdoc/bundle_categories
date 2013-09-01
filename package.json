@@ -9,7 +9,12 @@
   "author": "",
   "private": true,
   "dependencies": {
+    "async": "~0.2.9",
+    "glob": "~3.2.6"
   },
   "DEBUG local dependencies": {
+    "uglify-js-fork": "0.x",
+    "js_ast_utils": "0.x",
+    "file_memoize": "0.x"
   }
 }
