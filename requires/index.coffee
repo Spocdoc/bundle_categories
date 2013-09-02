@@ -8,28 +8,37 @@ async = require 'async'
 ug = require 'uglify-js-fork'
 regexFirstWord = /^\S*\s*/
 regexBrowserMin = /^\S*(?:[-\._]min)\S*\b/
-
-# note: eachSeries is used to avoid open file descriptor limit (may not be necessary)
+debug = require('debug-fork') "bundle_categories:requires"
 
 getAst = fileMemoize (filePath, cb) ->
   async.waterfall [
     (next) -> utils.readCode filePath, next
-    (code, next) -> next null, ug.parse code
+    (code, next) -> next null, ug.parse code, filename: filePath
   ], cb
 
-recurseFilepath = (set, expression, filePath, cb) ->
+recurseFilepath = (set, filePath, cb) ->
   async.waterfall [
     (next1) -> getAst filePath, next1
-    (ast, next1) -> recurseRequires set, expression, ast, next1
+    (ast, next1) -> recurseAst set, ast, next1
   ], cb
 
-recurseAst = (set, expression, ast, cb) ->
-  return cb() if (ast.seen ||= {})[expression]
-  ast.seen[expression] = true
+recurseAst = (set, ast, cb) ->
+  debug ast.start.file
+
+  seen = ast.seen ||= {}
+  unseen = 0
+  for id, expr of set.expressions
+    debug "    #{expr}"
+    unless seen[expr]
+      ++unseen
+      seen[expr] = true
+  unless unseen
+    debug "    no unseen so returning"
+    return cb()
 
   requiredPaths = []
 
-  utils.transformRequires (node) ->
+  utils.transformRequires ast, (node) ->
     requiredPaths.push utils.resolveRequirePath node
     node
 
@@ -38,36 +47,40 @@ recurseAst = (set, expression, ast, cb) ->
     async.waterfall [
       (next1) -> glob 'browser*', cwd: dir, next1
       (fileNames, next1) ->
-        if fileNames.length
-          expressions set.splitExpression expression, fileNames.map (expr) -> expr = expr.replace(regexFirstWord,''); path.basename expr, path.extname expr
-          i = -1
-
-          fn1 = (expr, next2) ->
-            ++i
-            return next2() unless regexBrowserMin.test fileNames[i]
-            try
-              resolved = require.resolve("#{dir}/#{fileNames[i]}")
-            catch _error
-              return next2()
-            recurseFilepath set, expr, resolved, next2
-
-          async.eachSeries expressions, fn1, next1
+        unless fileNames.length
+          recurseFilepath set, requiredPath, next1
         else
-          recurseFilepath set, expression, requiredPath, next1
+          fn1 = (id, next2) ->
+            expressions = set.splitExpression set.expressions[id], fileNames.map (expr) -> expr = expr.replace(regexFirstWord,''); path.basename expr, path.extname expr
+
+            i = -1
+
+            fn2 = (expr, next3) ->
+              ++i
+              return next3() if !expr or regexBrowserMin.test fileNames[i]
+              try
+                resolved = require.resolve("#{dir}/#{fileNames[i]}")
+              catch _error
+                return next3()
+              recurseFilepath new ExpressionSet(set, expr), resolved, next3
+
+            async.eachSeries expressions, fn2, next2
+
+          async.eachSeries Object.keys(set.expressions), fn1, next1
+
     ], next
 
   async.eachSeries requiredPaths, fn, cb
 
 module.exports = (codeOrFilePaths, callback) ->
-  set = new ExpressionSet
-  emptyExpression = new Expression
-  
+  set = new ExpressionSet(new Expression)
+
   async.series [
     (next) ->
       if Array.isArray codeOrFilePaths
-        async.eachSeries codeOrFilePaths, ((filePath, next1) -> recurseFilepath set, emptyExpression, filePath, next1), next
+        async.eachSeries codeOrFilePaths, ((filePath, next1) -> recurseFilepath set, filePath, next1), next
       else
-        recurseAst set, emptyExpression, ug.parse(codeOrFilePaths), next
+        recurseAst set, ug.parse(codeOrFilePaths), next
 
   ], (err) -> callback err, set.toArray()
 
