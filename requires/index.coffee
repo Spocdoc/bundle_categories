@@ -7,8 +7,10 @@ glob = require 'glob'
 async = require 'async'
 ug = require 'uglify-js-fork'
 regexFirstWord = /^\S*\s*/
-regexBrowserMin = /^\S*(?:[-\._]min)\S*\b/
-debug = require('debug-fork') "bundle_categories:requires"
+regexBrowserMin = /^\S*(?:[-\._]min)\b/
+regexMin = /(?:[-\._]min)\b/
+require 'debug-fork'
+debug = global.debug "bundle_categories:requires"
 
 getAst = fileMemoize (filePath, cb) ->
   async.waterfall [
@@ -85,3 +87,34 @@ module.exports = (codeOrFilePaths, callback) ->
 
   ], (err) -> callback err, set.toArray()
 
+
+module.exports.resolveBrowser = (filePath, expression, cb) ->
+  expression = new Expression expression unless expression instanceof Expression
+  dir = path.dirname filePath
+  ret = []
+  isMin = false
+
+  async.waterfall [
+    (next1) -> glob 'browser*', cwd: dir, next1
+
+    (fileNames, next1) ->
+      unless fileNames.length
+        ret.indexPath = filePath
+        cb null, ret
+      else
+        expressions = fileNames.map (expr) -> expr = expr.replace(regexFirstWord,''); new Expression path.basename(expr, path.extname expr)
+        for expr,i in expressions when expression.test expr
+          filePath = "#{dir}/#{fileNames[i]}"
+          unless isMin = regexBrowserMin.test fileNames[i]
+            try
+              ret.indexPath = require.resolve filePath
+            catch _error
+          return glob '*.js', cwd: filePath, next1
+        cb null, ret
+
+    (minFiles, next1) ->
+      for fileName in minFiles when isMin or regexMin.test fileName
+        ret.push "#{filePath}/#{fileName}"
+      cb null, ret
+
+  ], cb
