@@ -103,7 +103,7 @@ module.exports.resolveBrowser = (filePath, expression, cb) ->
         cb null, ret
       else
         expressions = fileNames.map (expr) -> expr = expr.replace(regexFirstWord,''); new Expression path.basename(expr, path.extname expr)
-        for expr,i in expressions when expression.test expr
+        for expr,i in expressions when expr.test expression
           filePath = "#{dir}/#{fileNames[i]}"
           unless isMin = regexBrowserMin.test fileNames[i]
             try
