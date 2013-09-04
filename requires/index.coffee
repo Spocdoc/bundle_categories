@@ -55,29 +55,51 @@ module.exports = (codeOrFilePaths) ->
   recurseRequiredPath set, resolve(filePath) for filePath in codeOrFilePaths
   set.toArray()
 
-module.exports.resolveBrowser = (filePath, expression) ->
-  dir = path.dirname filePath
-  ret = []
+module.exports.resolveBrowser = do ->
+  cache1Times = {}
+  cache1 = {}
 
-  unless (fileNames = glob.sync 'browser*', cwd: dir).length
-    ret.indexPath = filePath
-    return ret
+  cache2Times = {}
+  cache2 = {}
 
-  expression = new Expression expression unless expression instanceof Expression
+  (filePath, expression) ->
+    if filePath.substr(0,2) in ['..','./']
+      throw new Error "resolveBrowser requires an absolute path"
 
-  for fileName,i in fileNames
-    expr = fileName.replace regexFirstWord,''
-    expr = new Expression path.basename expr, path.extname expr
-    continue unless expr.test expression
+    dir = path.dirname filePath
 
-    filePath = "#{dir}/#{fileName}"
+    if cache1Times[dir] is mtime = _.getModTimeSync dir
+      {fileNames, expressions} = cache1[dir]
+    else
+      fileNames = glob.sync 'browser*', cwd: dir
+      expressions = []
+      for fileName, i in fileNames
+        fileName = fileName.replace regexFirstWord,''
+        expressions[i] = new Expression path.basename fileName, path.extname fileName
 
-    unless isMin = regexBrowserMin.test fileName
-      try
-        ret.indexPath = require.resolve filePath
-      catch _error
+      cache1Times[filePath] = mtime
+      cache1[filePath] = {fileNames, expressions}
 
-    minFiles = glob.sync '*.js', cwd: filePath
-    ret.push "#{filePath}/#{fileName}" for fileName in minFiles when isMin or regexMin.test fileName
+    unless fileNames.length
+      (ret = []).indexPath = filePath
+      return ret
 
-  ret
+    expression = new Expression expression unless expression instanceof Expression
+
+    for fileName,i in fileNames when expressions[i].test expression
+      filePath = "#{dir}/#{fileName}"
+      return cache2[filePath] if cache2Times[filePath] is mtime = _.getModTimeSync filePath
+
+      ret = []
+      unless isMin = regexBrowserMin.test fileName
+        try
+          ret.indexPath = require.resolve filePath
+        catch _error
+
+      minFiles = glob.sync '*.js', cwd: filePath
+      ret.push "#{filePath}/#{fileName}" for fileName in minFiles when isMin or regexMin.test fileName
+
+      cache2Times[filePath] = mtime
+      return cache2[filePath] = ret
+
+    []
