@@ -16,6 +16,7 @@
     "uglify-js-fork": "0.x",
     "js_ast_utils": "0.x",
     "debug-fork": "0.x",
-    "file_memoize": "0.x"
+    "lodash-fork": "0.x",
+    "resolve-fork": "0.x"
   }
 }
