@@ -30,7 +30,7 @@ module.exports = class Expression extends Array
     if typeof expression is 'string'
       words = expression.match regexWords
       expression = []
-      expression[i] = new Criterion word for word,i in words
+      expression[i] = new Criterion word for word,i in words if words
     else unless Array.isArray
       expression = [expression]
 

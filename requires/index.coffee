@@ -5,6 +5,7 @@ ExpressionSet = require '../expression_set'
 path = require 'path'
 glob = require 'glob'
 async = require 'async'
+fs = require 'fs'
 resolve = require 'resolve-fork'
 regexFirstWord = /^\S*\s*/
 regexBrowserMin = /^\S*(?:[-\._]min)\b/
@@ -96,8 +97,13 @@ module.exports.resolveBrowser = do ->
           ret.indexPath = require.resolve filePath
         catch _error
 
-      minFiles = glob.sync '*.js', cwd: filePath
-      ret.push "#{filePath}/#{fileName}" for fileName in minFiles when isMin or regexMin.test fileName
+      if fs.statSync(filePath).isDirectory()
+        minFiles = glob.sync '*.js', cwd: filePath
+        ret.push "#{filePath}/#{fileName}" for fileName in minFiles when isMin or regexMin.test fileName
+      else if isMin
+        ret.push filePath
+      else
+        ret.indexPath = filePath
 
       cache2Times[filePath] = mtime
       return cache2[filePath] = ret
