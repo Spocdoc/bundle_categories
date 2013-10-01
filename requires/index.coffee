@@ -11,8 +11,10 @@ regexFirstWord = /^\S*\s*/
 regexBrowserMin = /^\S*(?:[-\._]min)\b/
 regexMin = /(?:[-\._]min)\b/
 
+stack = {}
+
 recurseFilePath = (set, filePath) ->
-  for requiredPath in requiredPaths = utils.getRequiresSync filePath
+  for requiredPath in requiredPaths = utils.getRequiresSync filePath when !stack[requiredPath]
     recurseRequiredPath set, requiredPath
   return
 
@@ -21,6 +23,8 @@ recurseRequiredPath = do ->
   cache = {}
 
   (set, requiredPath) ->
+    stack[requiredPath] = 1
+
     if cacheTimes[requiredPath] is mtime = _.getModTimeSync requiredPath
       {dir,fileNames,subexpressions} = cache[requiredPath]
     else
@@ -42,17 +46,19 @@ recurseRequiredPath = do ->
       cacheTimes[requiredPath] = mtime
       cache[requiredPath] = {dir,fileNames,subexpressions}
 
-    return recurseFilePath set, requiredPath unless fileNames.length
+    unless fileNames.length
+      recurseFilePath set, requiredPath
+    else
+      for id, expr of set.expressions
+        for expr, i in set.splitExpression expr, subexpressions.concat() when expr and resolved = fileNames[i]
+          recurseFilePath new ExpressionSet(set, expr), resolved
 
-    for id, expr of set.expressions
-      for expr, i in set.splitExpression expr, subexpressions.concat() when expr and resolved = fileNames[i]
-        recurseFilePath new ExpressionSet(set, expr), resolved
-
+    delete stack[requiredPath]
     return
 
 module.exports = (codeOrFilePaths) ->
   set = new ExpressionSet(new Expression)
-  codeOrFilePaths = utils.getCodeRequires(codeOrFilePaths) unless Array.isArray codeOrFilePaths
+  codeOrFilePaths = utils.getCodeRequiresSync(codeOrFilePaths) unless Array.isArray codeOrFilePaths
   recurseRequiredPath set, resolve(filePath) for filePath in codeOrFilePaths
   set.toArray()
 
