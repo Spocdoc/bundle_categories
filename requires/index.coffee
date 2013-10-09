@@ -10,6 +10,8 @@ resolve = require 'resolve-fork'
 regexFirstWord = /^\S*\s*/
 regexBrowserMin = /^\S*(?:[-\._]min)\b/
 regexMin = /(?:[-\._]min)\b/
+# require 'debug-fork'
+# debug = global.debug 'bundle_cat'
 
 stack = {}
 
@@ -23,6 +25,7 @@ recurseRequiredPath = do ->
   cache = {}
 
   (set, requiredPath) ->
+    # debug "#{Object.keys(stack).length} #{set} #{requiredPath}"
     stack[requiredPath] = 1
 
     if cacheTimes[requiredPath] is mtime = _.getModTimeSync requiredPath

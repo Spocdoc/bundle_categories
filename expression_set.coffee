@@ -41,6 +41,14 @@ module.exports = class ExpressionSet
 
     others
 
+  toString: ->
+    str = ''
+    for id, expr of @expressions
+      str += ',' if str
+      str += expr
+    "[#{str}]"
+
+
   toArray: ->
     arr = []; i = 0
     arr[i++] = expr for id, expr of @expressions
