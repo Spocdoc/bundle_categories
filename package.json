@@ -12,7 +12,7 @@
     "async": "0.x",
     "glob": "3.x",
 
-    "uglify-js-fork": "0.x",
+    "uglify-js-fork": "2.x",
     "js_ast_utils": "0.x",
     "debug-fork": "0.x",
     "lodash-fork": "0.x",
