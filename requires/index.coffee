@@ -59,10 +59,10 @@ recurseRequiredPath = do ->
     delete stack[requiredPath]
     return
 
-module.exports = (codeOrFilePaths) ->
+module.exports = (codeOrFilePaths, root) ->
   set = new ExpressionSet(new Expression)
   codeOrFilePaths = utils.getCodeRequiresSync(codeOrFilePaths) unless Array.isArray codeOrFilePaths
-  recurseRequiredPath set, resolve(filePath) for filePath in codeOrFilePaths
+  recurseRequiredPath set, resolve(filePath, root) for filePath in codeOrFilePaths
   set.toArray()
 
 module.exports.resolveBrowser = do ->
