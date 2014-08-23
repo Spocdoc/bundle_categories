@@ -1,5 +1,5 @@
 ops = require './ops'
-_ = require 'lodash-fork'
+_ = require 'underscore-folly'
 maxInt = 9007199254740992
 minInt = -9007199254740992
 

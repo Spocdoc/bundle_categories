@@ -1,4 +1,4 @@
-_ = require 'lodash-fork'
+_ = require 'underscore-folly'
 Expression = require './expression'
 
 # assumes only only 'ie' expressions

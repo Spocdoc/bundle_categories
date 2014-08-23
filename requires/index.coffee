@@ -1,12 +1,11 @@
-_ = require 'lodash-fork'
-utils = require 'js_ast_utils'
+utils = _ = require 'underscore-folly'
 Expression = require '../expression'
 ExpressionSet = require '../expression_set'
 path = require 'path'
 glob = require 'glob'
 async = require 'async'
 fs = require 'fs'
-resolve = require 'resolve-fork'
+resolve = utils.resolve
 regexFirstWord = /^\S*\s*/
 regexBrowserMin = /^\S*(?:[-\._]min)\b/
 regexMin = /(?:[-\._]min)\b/
