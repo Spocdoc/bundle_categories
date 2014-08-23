@@ -7,7 +7,6 @@
   },
   "repository": "",
   "author": "",
-  "private": true,
   "dependencies": {
     "async": "0.x",
     "glob": "3.x",
